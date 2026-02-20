@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تقویم رنگی</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a22;
+    --surface2: #22222e;
+    --border: #2e2e3e;
+    --text: #e8e8f0;
+    --text-muted: #7070a0;
+    --accent: #7c6af5;
+    --accent2: #f5a26a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Vazirmatn', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  .controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .controls button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .controls button:hover, .controls button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  #nav-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  #nav-row button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  #nav-row button:hover { background: var(--accent); }
+
+  #period-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    min-width: 180px;
+    text-align: center;
+  }
+
+  .day-names {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  #calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+  }
+
+  .day-cell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    min-height: 72px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .day-cell:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+  .day-cell.today { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2); }
+
+  .day-cell.empty { background: transparent; border: none; cursor: default; }
+  .day-cell.empty:hover { transform: none; }
+
+  .day-num {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .day-cell.today .day-num { color: var(--accent2); }
+
+  .color-dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 4px;
+    justify-content: flex-end;
+  }
+
+  .color-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  .note-indicator {
+    position: absolute;
+    bottom: 5px;
+    left: 6px;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+  }
+
+  /* MODAL */
+  #modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+  }
+
+  #modal-overlay.open { display: flex; }
+
+  #modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    width: 420px;
+    max-width: 95vw;
+    animation: pop 0.2s ease;
+  }
+
+  @keyframes pop {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  #modal h2 { font-size: 1.1rem; margin-bottom: 18px; color: var(--accent2); }
+
+  .color-palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .palette-color {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .palette-color.selected {
+    border-color: #fff;
+    transform: scale(1.15);
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 10px;
+    resize: vertical;
+    min-height: 80px;
+    margin-bottom: 14px;
+  }
+
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  .modal-btns {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .modal-btns button {
+    padding: 9px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  #btn-save { background: var(--accent); color: #fff; }
+  #btn-save:hover { background: #6455e0; }
+  #btn-cancel { background: var(--surface2); color: var(--text-muted); }
+  #btn-cancel:hover { color: var(--text); }
+  #btn-clear { background: #3e1a1a; color: #f87171; }
+  #btn-clear:hover { background: #5a2020; }
+
+  /* LEGEND */
+  #legend {
+    margin-top: 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  #legend h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .legend-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+  }
+
+  .legend-input:focus { outline: none; border-color: var(--accent); }
+
+  #btn-add-color {
+    margin-top: 10px;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    padding: 7px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.8rem;
+    width: 100%;
+    transition: all 0.2s;
+  }
+
+  #btn-add-color:hover { border-color: var(--accent); color: var(--accent); }
+
+  .view-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .view-toggle button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 7px 22px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .view-toggle button.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+
+<h1>📅 تقویم رنگی</h1>
+
+<div class="view-toggle">
+  <button id="btn-month" class="active" onclick="setView('month')">ماهانه</button>
+  <button id="btn-week" onclick="setView('week')">هفتگی</button>
+</div>
+
+<div id="nav-row">
+  <button onclick="navigate(-1)">›</button>
+  <div id="period-label"></div>
+  <button onclick="navigate(1)">‹</button>
+</div>
+
+<div class="day-names" id="day-names"></div>
+<div id="calendar-grid"></div>
+
+<div id="legend">
+  <h3>🎨 راهنمای رنگ‌ها</h3>
+  <div id="legend-items"></div>
+  <button id="btn-add-color" onclick="addColor()">+ افزودن رنگ جدید</button>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h2 id="modal-title"></h2>
+    <label>رنگ‌ها را انتخاب کنید:</label>
+    <div class="color-palette" id="color-palette"></div>
+    <label>یادداشت:</label>
+    <textarea id="day-note" placeholder="یادداشت خود را اینجا بنویسید..."></textarea>
+    <div class="modal-btns">
+      <button id="btn-clear" onclick="clearDay()">پاک کردن</button>
+      <button id="btn-cancel" onclick="closeModal()">انصراف</button>
+      <button id="btn-save" onclick="saveDay()">ذخیره</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Jalali helpers ───────────────────────────────────────────
+function toJalali(gy, gm, gd) {
+  let jy, jm, jd, g_d_no, j_d_no, j_np, i;
+  const g_days_in_month = [31,28,31,30,31,30,31,31,30,31,30,31];
+  const j_days_in_month = [31,31,31,31,31,31,30,30,30,30,30,29];
+  gy -= 1600; gm -= 1; gd -= 1;
+  g_d_no = 365*gy + Math.floor((gy+3)/4) - Math.floor((gy+99)/100) + Math.floor((gy+399)/400);
+  for (i=0; i<gm; i++) g_d_no += g_days_in_month[i];
+  if (gm>1 && ((gy%4==0 && gy%100!=0)||(gy%400==0))) g_d_no++;
+  g_d_no += gd;
+  j_d_no = g_d_no - 79;
+  j_np = Math.floor(j_d_no/12053); j_d_no %= 12053;
+  jy = 979 + 33*j_np + 4*Math.floor(j_d_no/1461);
+  j_d_no %= 1461;
+  if (j_d_no >= 366) { jy += Math.floor((j_d_no-1)/365); j_d_no = (j_d_no-1)%365; }
+  for (i=0; i<11 && j_d_no >= j_days_in_month[i]; i++) j_d_no -= j_days_in_month[i];
+  jm = i+1; jd = j_d_no+1;
+  return [jy, jm, jd];
+}
+
+function toGregorian(jy, jm, jd) {
+  let gy, gm, gd;
+  const g_days_in_month = [31,28,31,30,31,30,31,31,30,31,30,31];
+  const j_days_in_month = [31,31,31,31,31,31,30,30,30,30,30,29];
+  jy -= 979; jm -= 1; jd -= 1;
+  let j_day_no = 365*jy + Math.floor(jy/33)*8 + Math.floor((jy%33+3)/4);
+  for (let i=0; i<jm; i++) j_day_no += j_days_in_month[i];
+  j_day_no += jd;
+  let g_day_no = j_day_no + 79;
+  let gy0 = 1600 + 400*Math.floor(g_day_no/146097); g_day_no %= 146097;
+  let leap = true;
+  if (g_day_no >= 36525) {
+    g_day_no--;
+    gy0 += 100*Math.floor(g_day_no/36524); g_day_no %= 36524;
+    if (g_day_no >= 365) g_day_no++;
+    else leap = false;
+  }
+  gy0 += 4*Math.floor(g_day_no/1461); g_day_no %= 1461;
+  if (g_day_no >= 366) { leap = false; g_day_no--; gy0 += Math.floor(g_day_no/365); g_day_no %= 365; }
+  gy = gy0;
+  for (let i=0; i<12; i++) {
+    let dm = g_days_in_month[i] + (i==1 && leap ? 1 : 0);
+    if (g_day_no < dm) { gm = i+1; gd = g_day_no+1; break; }
+    g_day_no -= dm;
+  }
+  return [gy, gm, gd];
+}
+
+function jalaliMonthDays(jy, jm) {
+  if (jm <= 6) return 31;
+  if (jm <= 11) return 30;
+  return isJalaliLeap(jy) ? 30 : 29;
+}
+
+function isJalaliLeap(jy) {
+  const rem = jy % 33;
+  return [1,5,9,13,17,22,26,30].includes(rem);
+}
+
+function jalaliDayOfWeek(jy, jm, jd) {
+  const [gy, gm, gd] = toGregorian(jy, jm, jd);
+  const d = new Date(gy, gm-1, gd).getDay();
+  // Sat=0, Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6 (Persian week starts Saturday)
+  return (d+1) % 7;
+}
+
+const JALALI_MONTHS = ['فروردین','اردیبهشت','خرداد','تیر','مرداد','شهریور','مهر','آبان','آذر','دی','بهمن','اسفند'];
+const WEEK_DAYS = ['ش','ی','د','س','چ','پ','ج'];
+const WEEK_DAYS_FULL = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه','جمعه'];
+
+// ─── State ────────────────────────────────────────────────────
+let data = JSON.parse(localStorage.getItem('caldata') || '{}');
+// data[dateKey] = { colors: [], note: '' }
+
+let colors = JSON.parse(localStorage.getItem('calcolors') || 'null') || [
+  { hex: '#7c6af5', label: 'مطالعه' },
+  { hex: '#f5a26a', label: 'ورزش' },
+  { hex: '#6af5a2', label: 'کار' },
+  { hex: '#f56a6a', label: 'قرار ملاقات' },
+  { hex: '#6ac4f5', label: 'استراحت' },
+];
+
+function saveColors() { localStorage.setItem('calcolors', JSON.stringify(colors)); }
+function saveData() { localStorage.setItem('caldata', JSON.stringify(data)); }
+
+// today in jalali
+const today = new Date();
+const [tj, tm, td] = toJalali(today.getFullYear(), today.getMonth()+1, today.getDate());
+
+let currentView = 'month'; // 'month' | 'week'
+let currentJY = tj, currentJM = tm;
+// For week view, track start day
+let weekStartJD = td - jalaliDayOfWeek(tj, tm, td); // adjust to Saturday
+let weekStartJM = tm, weekStartJY = tj;
+// recalculate properly
+function initWeek() {
+  let dow = jalaliDayOfWeek(tj, tm, td);
+  // go back dow days to reach Saturday
+  let d = td - dow;
+  let m = tm, y = tj;
+  while (d < 1) { m--; if (m<1){m=12;y--;} d += jalaliMonthDays(y,m); }
+  weekStartJD = d; weekStartJM = m; weekStartJY = y;
+}
+initWeek();
+
+function dateKey(y, m, d) { return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+
+// ─── Render ───────────────────────────────────────────────────
+function render() {
+  const dayNames = document.getElementById('day-names');
+  dayNames.innerHTML = WEEK_DAYS.map(d=>`<div>${d}</div>`).join('');
+
+  if (currentView === 'month') renderMonth();
+  else renderWeek();
+  renderLegend();
+}
+
+function renderMonth() {
+  document.getElementById('period-label').textContent = `${JALALI_MONTHS[currentJM-1]} ${currentJY}`;
+  const grid = document.getElementById('calendar-grid');
+  grid.innerHTML = '';
+  const firstDow = jalaliDayOfWeek(currentJY, currentJM, 1);
+  const totalDays = jalaliMonthDays(currentJY, currentJM);
+
+  for (let i=0; i<firstDow; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'day-cell empty';
+    grid.appendChild(empty);
+  }
+
+  for (let d=1; d<=totalDays; d++) {
+    const key = dateKey(currentJY, currentJM, d);
+    const isToday = currentJY===tj && currentJM===tm && d===td;
+    const cell = document.createElement('div');
+    cell.className = 'day-cell' + (isToday ? ' today' : '');
+    cell.onclick = () => openModal(currentJY, currentJM, d);
+
+    const num = document.createElement('div');
+    num.className = 'day-num';
+    num.textContent = d;
+    cell.appendChild(num);
+
+    const dayData = data[key];
+    if (dayData?.colors?.length) {
+      const dots = document.createElement('div');
+      dots.className = 'color-dots';
+      dayData.colors.forEach(c => {
+        const dot = document.createElement('div');
+        dot.className = 'color-dot';
+        dot.style.background = c;
+        dots.appendChild(dot);
+      });
+      cell.appendChild(dots);
+    }
+    if (dayData?.note) {
+      const ni = document.createElement('div');
+      ni.className = 'note-indicator';
+      ni.textContent = '📝';
+      cell.appendChild(ni);
+    }
+    grid.appendChild(cell);
+  }
+}
+
+function renderWeek() {
+  // build 7 days starting from weekStart
+  let days = [];
+  let y = weekStartJY, m = weekStartJM, d = weekStartJD;
+  for (let i=0; i<7; i++) {
+    days.push({y,m,d});
+    d++;
+    if (d > jalaliMonthDays(y,m)) { d=1; m++; if(m>12){m=1;y++;} }
+  }
+  const first = days[0], last = days[6];
+  document.getElementById('period-label').textContent =
+    first.m===last.m ? `${JALALI_MONTHS[first.m-1]} ${first.y}` :
+    `${JALALI_MONTHS[first.m-1]} - ${JALALI_MONTHS[last.m-1]} ${first.y}`;
+
+  const grid = document.getElementById('calendar-grid');
+  grid.innerHTML = '';
+
+  days.forEach(({y,m,d}) => {
+    const key = dateKey(y,m,d);
+    const isToday = y===tj && m===tm && d===td;
+    const cell = document.createElement('div');
+    cell.className = 'day-cell' + (isToday ? ' today' : '');
+    cell.style.minHeight = '100px';
+    cell.onclick = () => openModal(y,m,d);
+
+    const num = document.createElement('div');
+    num.className = 'day-num';
+    num.textContent = d;
+    cell.appendChild(num);
+
+    const dayData = data[key];
+    if (dayData?.colors?.length) {
+      const dots = document.createElement('div');
+      dots.className = 'color-dots';
+      dayData.colors.forEach(c => {
+        const dot = document.createElement('div');
+        dot.className = 'color-dot';
+        dot.style.background = c; dot.style.width='14px'; dot.style.height='14px';
+        dots.appendChild(dot);
+      });
+      cell.appendChild(dots);
+    }
+    if (dayData?.note) {
+      const ni = document.createElement('div');
+      ni.className = 'note-indicator';
+      ni.textContent = '📝 '+dayData.note.substring(0,20)+(dayData.note.length>20?'...':'');
+      ni.style.position='static'; ni.style.marginTop='6px'; ni.style.fontSize='0.72rem'; ni.style.textAlign='right';
+      cell.appendChild(ni);
+    }
+    grid.appendChild(cell);
+  });
+}
+
+function renderLegend() {
+  const container = document.getElementById('legend-items');
+  container.innerHTML = '';
+  colors.forEach((c, i) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = `
+      <div class="legend-dot" style="background:${c.hex}" onclick="pickColorHex(${i})"></div>
+      <input class="legend-input" value="${c.label}" placeholder="توضیح این رنگ..." oninput="updateLabel(${i}, this.value)">
+      <div style="cursor:pointer;color:#f87171;font-size:1rem" onclick="removeColor(${i})" title="حذف">✕</div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// ─── Navigation ───────────────────────────────────────────────
+function navigate(dir) {
+  if (currentView === 'month') {
+    currentJM += dir;
+    if (currentJM > 12) { currentJM=1; currentJY++; }
+    if (currentJM < 1) { currentJM=12; currentJY--; }
+  } else {
+    // advance/back by 7 days
+    let d = weekStartJD + dir*7;
+    let m = weekStartJM, y = weekStartJY;
+    while (d < 1) { m--; if(m<1){m=12;y--;} d+=jalaliMonthDays(y,m); }
+    while (d > jalaliMonthDays(y,m)) { d-=jalaliMonthDays(y,m); m++; if(m>12){m=1;y++;} }
+    weekStartJD=d; weekStartJM=m; weekStartJY=y;
+  }
+  render();
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('btn-month').classList.toggle('active', v==='month');
+  document.getElementById('btn-week').classList.toggle('active', v==='week');
+  render();
+}
+
+// ─── Modal ────────────────────────────────────────────────────
+let modalKey = '';
+let selectedColors = [];
+
+function openModal(y, m, d) {
+  modalKey = dateKey(y, m, d);
+  document.getElementById('modal-title').textContent = `${d} ${JALALI_MONTHS[m-1]} ${y}`;
+  const existing = data[modalKey] || {};
+  selectedColors = [...(existing.colors || [])];
+  document.getElementById('day-note').value = existing.note || '';
+  renderPalette();
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function renderPalette() {
+  const palette = document.getElementById('color-palette');
+  palette.innerHTML = '';
+  colors.forEach(c => {
+    const btn = document.createElement('div');
+    btn.className = 'palette-color' + (selectedColors.includes(c.hex) ? ' selected' : '');
+    btn.style.background = c.hex;
+    btn.title = c.label;
+    btn.onclick = () => toggleColor(c.hex, btn);
+    palette.appendChild(btn);
+  });
+}
+
+function toggleColor(hex, el) {
+  if (selectedColors.includes(hex)) {
+    selectedColors = selectedColors.filter(c=>c!==hex);
+    el.classList.remove('selected');
+  } else {
+    selectedColors.push(hex);
+    el.classList.add('selected');
+  }
+}
+
+function saveDay() {
+  const note = document.getElementById('day-note').value.trim();
+  if (selectedColors.length || note) {
+    data[modalKey] = { colors: selectedColors, note };
+  } else {
+    delete data[modalKey];
+  }
+  saveData();
+  closeModal();
+  render();
+}
+
+function clearDay() {
+  delete data[modalKey];
+  saveData();
+  closeModal();
+  render();
+}
+
+// ─── Color management ─────────────────────────────────────────
+const PRESET_COLORS = ['#7c6af5','#f5a26a','#6af5a2','#f56a6a','#6ac4f5','#f5e26a','#f56af0','#a2f56a','#f5a2c4','#6af5e2'];
+let presetIdx = 0;
+
+function addColor() {
+  const hex = PRESET_COLORS[presetIdx++ % PRESET_COLORS.length];
+  colors.push({ hex, label: 'رنگ جدید' });
+  saveColors();
+  render();
+}
+
+function removeColor(i) {
+  const hex = colors[i].hex;
+  colors.splice(i, 1);
+  // remove this color from all day data
+  Object.keys(data).forEach(k => {
+    if (data[k].colors) data[k].colors = data[k].colors.filter(c=>c!==hex);
+  });
+  saveColors(); saveData();
+  render();
+}
+
+function updateLabel(i, val) {
+  colors[i].label = val;
+  saveColors();
+}
+
+function pickColorHex(i) {
+  const input = document.createElement('input');
+  input.type = 'color';
+  input.value = colors[i].hex;
+  input.addEventListener('change', () => {
+    const oldHex = colors[i].hex;
+    colors[i].hex = input.value;
+    // update data
+    Object.keys(data).forEach(k => {
+      if (data[k].colors) data[k].colors = data[k].colors.map(c=>c===oldHex?input.value:c);
+    });
+    saveColors(); saveData(); render();
+  });
+  input.click();
+}
+
+// close modal on overlay click
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ─── Init ─────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
